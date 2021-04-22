@@ -2,6 +2,9 @@ import xlrd
 import json
 import os
 import warnings
+from datetime import time
+from datetime import date
+import re
 
 
 TEST_EXCEL_FILE = r'D:\python_scripts\uav_stat\input_files\NLFT 2019.05.01..xls'
@@ -22,6 +25,8 @@ def process_excel_file(excel_file_path, excel_sheet_number):
     data_of_interest_reached = False
     serial_number_reached    = False
 
+    excel_file_name = get_excel_file_name(excel_file_path)
+
     for row in range(0, sheet.nrows):
         
         row_content = sheet.row_values(row)
@@ -38,7 +43,7 @@ def process_excel_file(excel_file_path, excel_sheet_number):
             single_airspace_args.append(row_content)
 
     for item in all_airspace_args:
-        create_single_airspace_dict(item)
+        create_single_airspace_dict(item, excel_file_name)
         for row in item:
             print (row)
         print('----')
@@ -47,7 +52,7 @@ def process_excel_file(excel_file_path, excel_sheet_number):
 # TODO: Continue with a function which processes this complicated list and returns a great dict and saves a json file too
 
 
-def create_single_airspace_dict(rows_to_process):
+def create_single_airspace_dict(rows_to_process, origin_of_rows):
 
     
 
@@ -71,15 +76,19 @@ def create_single_airspace_dict(rows_to_process):
     """
 
     single_airspace_dict = {
-        "file_id"                  : "NA", 
-        "date"                     : "NA",
+        "file_id"                  : origin_of_rows, 
+        "date"                     : excel_file_name_to_date(origin_of_rows),
         "serial_number"            : get_sa_serial_number(rows_to_process),
         "boundary_coord_poly"      : get_boundary_coord_poly(rows_to_process),
         "boundary_coord_circle"    : get_boundary_coord_circle(rows_to_process),
         "boundary_alt_l"           : get_boundary_alt_l(rows_to_process),
         "boundary_alt_h"           : get_boundary_alt_h(rows_to_process),
-        "op_time_planned"          : "NA",
-        "op_time_actual"           : "NA",
+        "op_time_plan_start"       : "NA",
+        "op_time_plan_end"         : "NA",
+        "op_duration_plan"         : "NA",
+        "op_time_act_start"        : "NA",
+        "op_time_act_end"          : "NA",
+        "op_duration_act"          : "NA",
         "applicant_name"           : get_applicant_name(rows_to_process),
         "applicant_phone"          : get_applicant_phone(rows_to_process),
         "mission_type_hun"         : get_mission_type_hun(rows_to_process),
@@ -87,12 +96,17 @@ def create_single_airspace_dict(rows_to_process):
         "matias_or_lara_id"        : get_matias_or_lara_id(rows_to_process),
     }
 
+    print(origin_of_rows)
+    print(excel_file_name_to_date(origin_of_rows))
     print(get_sa_serial_number(rows_to_process))
     print(get_boundary_coord_poly(rows_to_process))
     print(get_boundary_coord_circle(rows_to_process))
     print(get_boundary_alt_l(rows_to_process))
     print(get_boundary_alt_h(rows_to_process))
-    #
+    print(get_op_time_plan_start(rows_to_process))
+    print(get_op_time_plan_end(rows_to_process))
+    print(get_op_time_act_start(rows_to_process))
+    print(get_op_time_act_end(rows_to_process))
     #
     print(get_applicant_name(rows_to_process))
     print(get_applicant_phone(rows_to_process))
@@ -101,6 +115,8 @@ def create_single_airspace_dict(rows_to_process):
     print(get_matias_or_lara_id(rows_to_process))
 
 def get_sa_serial_number(rows_to_process):
+
+    sa_serial_number = rows_to_process[0][0]
     
     try:
         return int(float(rows_to_process[0][0]))
@@ -150,53 +166,141 @@ def get_boundary_alt_h(rows_to_process):
 # TODO: ***
 # TODO: Implement missing getters here!
 # TODO: ***
+# TODO: False return values may not be the best ones... None would be better in some cases.
+
+def get_op_time_plan_start(rows_to_process):
+
+    try:
+        op_time_plan_start = xlrd.xldate_as_tuple(rows_to_process[0][5], 0)
+    except TypeError:
+        return False
+
+    op_time_plan_start = time(op_time_plan_start[3], op_time_plan_start[4], op_time_plan_start[5])
+
+    return op_time_plan_start
+
+def get_op_time_plan_end(rows_to_process):
+
+    try:
+        op_time_plan_end = xlrd.xldate_as_tuple(rows_to_process[0][6], 0)
+    except  TypeError:
+        return False
+
+    op_time_plan_end = time(op_time_plan_end[3], op_time_plan_end[4], op_time_plan_end[5])
+
+    return op_time_plan_end
+
+def get_op_time_act_start(rows_to_process):
+
+    op_time_act_start_0 = rows_to_process[0][9]
+    op_time_act_start_1 = rows_to_process[1][9]
+
+    if op_time_act_start_0 != '':
+        try:
+            op_time_act_start = xlrd.xldate_as_tuple(op_time_act_start_0, 0)
+        except TypeError:
+            return False
+    
+    elif op_time_act_start_1 != '':
+        try:
+            op_time_act_start = xlrd.xldate_as_tuple(op_time_act_start_1, 0)
+        except TypeError:
+            return False
+    
+    else:
+        return False
+
+    op_time_act_start = time(op_time_act_start[3], op_time_act_start[4], op_time_act_start[5])
+
+    return op_time_act_start
+
+def get_op_time_act_end(rows_to_process):
+
+    op_time_act_end_0 = rows_to_process[0][10]
+    op_time_act_end_1 = rows_to_process[1][10]
+
+    if op_time_act_end_0 != '':
+        try:
+            op_time_act_end = xlrd.xldate_as_tuple(op_time_act_end_0, 0)
+        except TypeError:
+            return False
+
+    elif op_time_act_end_1 != '':
+        try:
+            op_time_act_end = xlrd.xldate_as_tuple(op_time_act_end_1, 0)
+        except TypeError:
+            return False
+
+    else:
+        return False
+
+    op_time_act_end = time(op_time_act_end[3], op_time_act_end[4], op_time_act_end[5])
+    
+    return op_time_act_end
 
 def get_applicant_name(rows_to_process):
 
-    if rows_to_process[0][7] == '':
+    applicant_name = rows_to_process[0][7]
+
+    if applicant_name == '':
         print("Ad-hoc segregated airspace applicant name could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
-        warnings.warn("Ad-hoc segregated airspace applicant name could be faulty! {}! Please verify. See inputted rows: {}".format(rows_to_process))
+        warnings.warn("Ad-hoc segregated airspace applicant name could be faulty! {}! Please verify. See inputted rows: {}".format(applicant_name, rows_to_process))
     
-    return rows_to_process[0][7]
+    return applicant_name
     
 def get_applicant_phone(rows_to_process):
 
-    if rows_to_process[1][7] == '':
-        print("Ad-hoc segregated airspace applicant phone number could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
-        warnings.warn("Ad-hoc segregated airspace applicant phone number could be faulty! {}! Please verify. See inputted rows: {}".format(rows_to_process))
-    
-    return rows_to_process[1][7]
+    applicant_phone = rows_to_process[1][7]
 
-def get_applicant_phone(rows_to_process):
-
-    if rows_to_process[1][7] == '':
+    if applicant_phone == '':
         print("Ad-hoc segregated airspace applicant phone number could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
-        warnings.warn("Ad-hoc segregated airspace applicant phone number could be faulty! {}! Please verify. See inputted rows: {}".format(rows_to_process))
+        warnings.warn("Ad-hoc segregated airspace applicant phone number could be faulty! {}! Please verify. See inputted rows: {}".format(applicant_phone, rows_to_process))
     
-    return rows_to_process[1][7]
+    return applicant_phone
 
 def get_mission_type_hun(rows_to_process):
 
-    if rows_to_process[0][8] == '':
+    mission_type_hun = rows_to_process[0][8]
+
+    if mission_type_hun == '':
         print("Ad-hoc segregated airspace mission type could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
-        warnings.warn("Ad-hoc segregated airspace mission type could be faulty! {}! Please verify. See inputted rows: {}".format(rows_to_process))
+        warnings.warn("Ad-hoc segregated airspace mission type could be faulty! {}! Please verify. See inputted rows: {}".format(mission_type_hun, rows_to_process))
     
-    return rows_to_process[0][8]
+    return mission_type_hun
 
 def get_mission_type_eng(rows_to_process):
 
-    if rows_to_process[1][8] == '':
+    mission_type_eng = rows_to_process[1][8]
+
+    if mission_type_eng == '':
         print("Ad-hoc segregated airspace mission type could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
-        warnings.warn("Ad-hoc segregated airspace mission type could be faulty! {}! Please verify. See inputted rows: {}".format(rows_to_process))
+        warnings.warn("Ad-hoc segregated airspace mission type could be faulty! {}! Please verify. See inputted rows: {}".format(mission_type_eng, rows_to_process))
     
-    return rows_to_process[1][8]
+    return mission_type_eng
 
 def get_matias_or_lara_id(rows_to_process):
 
     return [row[13] for row in rows_to_process if row[13] != '']
 
+def get_excel_file_name(file_path):
 
-            
+    splitted_path = file_path.split('\\')
+
+    return splitted_path[-1]
+
+def excel_file_name_to_date(file_name):
+
+    a = re.search(r'([0-9][0-9][0-9][0-9]).([0-9][0-9]).([0-9][0-9]).', file_name)
+
+    year    = int(a.group(1))
+    month   = int(a.group(2))
+    day     = int(a.group(3))
+
+    
+    return date(year, month, day)
+
+
+                
 
 
 
