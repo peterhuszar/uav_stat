@@ -81,13 +81,14 @@ def create_single_airspace_dict(rows_to_process, origin_of_rows):
         "serial_number"            : get_sa_serial_number(rows_to_process),
         "boundary_coord_poly"      : get_boundary_coord_poly(rows_to_process),
         "boundary_coord_circle"    : get_boundary_coord_circle(rows_to_process),
+        "place_name"               : get_place_name(rows_to_process),
         "boundary_alt_l"           : get_boundary_alt_l(rows_to_process),
         "boundary_alt_h"           : get_boundary_alt_h(rows_to_process),
-        "op_time_plan_start"       : "NA",
-        "op_time_plan_end"         : "NA",
+        "op_time_plan_start"       : get_op_time_plan_start(rows_to_process),
+        "op_time_plan_end"         : get_op_time_plan_end(rows_to_process),
         "op_duration_plan"         : "NA",
-        "op_time_act_start"        : "NA",
-        "op_time_act_end"          : "NA",
+        "op_time_act_start"        : get_op_time_act_start(rows_to_process),
+        "op_time_act_end"          : get_op_time_act_end(rows_to_process),
         "op_duration_act"          : "NA",
         "applicant_name"           : get_applicant_name(rows_to_process),
         "applicant_phone"          : get_applicant_phone(rows_to_process),
@@ -101,6 +102,7 @@ def create_single_airspace_dict(rows_to_process, origin_of_rows):
     print(get_sa_serial_number(rows_to_process))
     print(get_boundary_coord_poly(rows_to_process))
     print(get_boundary_coord_circle(rows_to_process))
+    print(get_place_name(rows_to_process))
     print(get_boundary_alt_l(rows_to_process))
     print(get_boundary_alt_h(rows_to_process))
     print(get_op_time_plan_start(rows_to_process))
@@ -131,7 +133,17 @@ def get_boundary_coord_circle(rows_to_process):
             ('r' in rows_to_process[1][1]) and
             ('=' in rows_to_process[1][1])):
         
-        return [row[1] for row in rows_to_process if row[1] != '']
+        raw_cell_content = [row[1] for row in rows_to_process if (row[1] != '' and '(' not in row[1] and ')' not in row[1])]
+        
+        raw_radius = raw_cell_content[1]
+
+        # TODO: regex pattern could be fixed to matcth the unit except white spaces. Now I am stripping it when returning.
+        r = re.search('([0-9]+)(.*)', raw_radius)
+        radius = r.group(1)
+        unit = r.group(2)
+
+        return [raw_cell_content[0], float(radius), unit.strip()]
+
     else:
         return False
 
@@ -139,9 +151,17 @@ def get_boundary_coord_poly(rows_to_process):
 
     if 'r' not in rows_to_process[1][1] and '=' not in rows_to_process[1][1]:
         
-        return [row[1] for row in rows_to_process if row[1] != '']
+        return [row[1] for row in rows_to_process if (row[1] != '' and '(' not in row[1] and ')' not in row[1])]
     else:
         return False
+
+def get_place_name(rows_to_process):
+
+    second_col = [row[1] for row in rows_to_process if row[1] != '']
+    place_name = second_col[-1]
+    place_name = place_name.strip('()')
+
+    return place_name
 
 def get_boundary_alt_l(rows_to_process):
     
@@ -155,13 +175,23 @@ def get_boundary_alt_l(rows_to_process):
 
 def get_boundary_alt_h(rows_to_process):
 
-    # TODO: AMSL's missing, make sure to concatenate altitude cells with them
+    boundary_alt_h = rows_to_process[0][4]
+    reference = rows_to_process[1][4]
 
-    if rows_to_process[0][4] == '':
+    if boundary_alt_h == '':
         print("Ad-hoc segregated airspace higher boundary altitude could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
-        warnings.warn("Ad-hoc segregated airspace higher boundary altitude could be faulty! {}! Please verify. See inputted rows: {}".format(rows_to_process))
+        warnings.warn("Ad-hoc segregated airspace higher boundary altitude could be faulty! {}! Please verify. See inputted rows: {}".format(boundary_alt_h, rows_to_process))
+
+    boundary_alt_h = boundary_alt_h.split(' ')
+    boundary_alt_h.append(reference)
+
+    try:
+        boundary_alt_h[0] = float(boundary_alt_h[0])
+    except ValueError:
+        warnings.warn("Ad-hoc segregated airspace higher boundary altitude could be faulty! {}! Please verify. See inputted rows: {}".format(boundary_alt_h, rows_to_process))
     
-    return rows_to_process[0][4]
+    return boundary_alt_h
+
 
 # TODO: ***
 # TODO: Implement missing getters here!
@@ -256,6 +286,8 @@ def get_applicant_phone(rows_to_process):
         print("Ad-hoc segregated airspace applicant phone number could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
         warnings.warn("Ad-hoc segregated airspace applicant phone number could be faulty! {}! Please verify. See inputted rows: {}".format(applicant_phone, rows_to_process))
     
+    applicant_phone = applicant_phone.replace('/', '')
+
     return applicant_phone
 
 def get_mission_type_hun(rows_to_process):
@@ -276,11 +308,16 @@ def get_mission_type_eng(rows_to_process):
         print("Ad-hoc segregated airspace mission type could be faulty! Please verify. See inputted rows: {}".format(rows_to_process))
         warnings.warn("Ad-hoc segregated airspace mission type could be faulty! {}! Please verify. See inputted rows: {}".format(mission_type_eng, rows_to_process))
     
+    mission_type_eng = mission_type_eng.strip('()')
+
     return mission_type_eng
 
 def get_matias_or_lara_id(rows_to_process):
 
-    return [row[13] for row in rows_to_process if row[13] != '']
+    
+    cells = [row[13] for row in rows_to_process if row[13] != '']
+
+    return ','.join(cells)
 
 def get_excel_file_name(file_path):
 
@@ -295,24 +332,10 @@ def excel_file_name_to_date(file_name):
     year    = int(a.group(1))
     month   = int(a.group(2))
     day     = int(a.group(3))
-
     
     return date(year, month, day)
 
-
-                
-
-
-
-
-
-
-
-
-
-            
-
-        
+# TODO: I was here, continue... with the AMSL issue or with the missing getters and duration calc.
 
         
 
