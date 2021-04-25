@@ -139,10 +139,17 @@ def get_sa_serial_number(rows_to_process):
 
 def get_boundary_coord_circle(rows_to_process):
 
-    if (('N' in rows_to_process[0][1]) and 
-            ('E' in rows_to_process[0][1]) and
-            ('r' in rows_to_process[1][1]) and
-            ('=' in rows_to_process[1][1])):
+    try:
+        cell_to_check_1 = rows_to_process[0][1]
+        cell_to_check_2 = rows_to_process[1][1]
+    
+    except IndexError:
+        return None
+
+    if (('N' in cell_to_check_1) and 
+            ('E' in cell_to_check_1) and
+            ('r' in cell_to_check_2) and
+            ('=' in cell_to_check_2)):
         
         raw_cell_content = [row[1] for row in rows_to_process if (row[1] != '' and '(' not in row[1] and ')' not in row[1])]
         
@@ -160,7 +167,12 @@ def get_boundary_coord_circle(rows_to_process):
 
 def get_boundary_coord_poly(rows_to_process):
 
-    if 'r' not in rows_to_process[1][1] and '=' not in rows_to_process[1][1]:
+    try:
+        cell_to_check = rows_to_process[1][1]
+    except IndexError:
+        return None
+
+    if 'r' not in cell_to_check and '=' not in cell_to_check:
         
         return [row[1] for row in rows_to_process if (row[1] != '' and '(' not in row[1] and ')' not in row[1])]
     else:
@@ -188,8 +200,11 @@ def get_boundary_alt_l(rows_to_process):
 
 def get_boundary_alt_h(rows_to_process):
 
-    boundary_alt_h = rows_to_process[0][4]
-    reference = rows_to_process[1][4]
+    try:
+        boundary_alt_h = rows_to_process[0][4]
+        reference = rows_to_process[1][4]
+    except IndexError:
+        return None
 
     if boundary_alt_h == '':
         msg = "Ad-hoc segregated airspace higher boundary altitude could be faulty! Please verify. See inputted rows: {}".format(rows_to_process)
@@ -213,18 +228,18 @@ def get_boundary_alt_h(rows_to_process):
 def get_op_time_plan_start(rows_to_process, date):
 
     try:
-        op_time_plan_start = xlrd.xldate_as_tuple(rows_to_process[0][5], 0)
+        op_time_plan_start = xlrd.xldate_as_tuple(rows_to_process[0][5], 1)
     except TypeError:
-        return False
+        return None
 
     return datetime.datetime(date.year, date.month, date.day, op_time_plan_start[3], op_time_plan_start[4], op_time_plan_start[5])
 
 def get_op_time_plan_end(rows_to_process, date):
 
     try:
-        op_time_plan_end = xlrd.xldate_as_tuple(rows_to_process[0][6], 0)
+        op_time_plan_end = xlrd.xldate_as_tuple(rows_to_process[0][6], 1)
     except  TypeError:
-        return False
+        return None
 
     return datetime.datetime(date.year, date.month, date.day, op_time_plan_end[3], op_time_plan_end[4], op_time_plan_end[5])
 
@@ -258,21 +273,23 @@ def get_op_duration_act(earlier_datetime, latter_datetime):
 
 def get_op_time_act_start(rows_to_process, date):
 
-    op_time_act_start_0 = rows_to_process[0][9]
-    op_time_act_start_1 = rows_to_process[1][9]
+    try:
+        op_time_act_start_0 = rows_to_process[0][9]
+        op_time_act_start_1 = rows_to_process[1][9]
+    except IndexError:
+        return None
 
     if op_time_act_start_0 != '':
         try:
-            op_time_act_start = xlrd.xldate_as_tuple(op_time_act_start_0, 0)
+            op_time_act_start = xlrd.xldate_as_tuple(op_time_act_start_0, 1)
         except TypeError:
             return None
     
     elif op_time_act_start_1 != '':
         try:
-            op_time_act_start = xlrd.xldate_as_tuple(op_time_act_start_1, 0)
+            op_time_act_start = xlrd.xldate_as_tuple(op_time_act_start_1, 1)
         except TypeError:
             return None
-    
     else:
         return None
 
@@ -280,18 +297,21 @@ def get_op_time_act_start(rows_to_process, date):
 
 def get_op_time_act_end(rows_to_process, date):
 
-    op_time_act_end_0 = rows_to_process[0][10]
-    op_time_act_end_1 = rows_to_process[1][10]
+    try:
+        op_time_act_end_0 = rows_to_process[0][10]
+        op_time_act_end_1 = rows_to_process[1][10]
+    except IndexError:
+        return None
 
     if op_time_act_end_0 != '':
         try:
-            op_time_act_end = xlrd.xldate_as_tuple(op_time_act_end_0, 0)
+            op_time_act_end = xlrd.xldate_as_tuple(op_time_act_end_0, 1)
         except TypeError:
             return None
 
     elif op_time_act_end_1 != '':
         try:
-            op_time_act_end = xlrd.xldate_as_tuple(op_time_act_end_1, 0)
+            op_time_act_end = xlrd.xldate_as_tuple(op_time_act_end_1, 1)
         except TypeError:
             return None
 
@@ -314,7 +334,10 @@ def get_applicant_name(rows_to_process):
     
 def get_applicant_phone(rows_to_process):
 
-    applicant_phone = str(rows_to_process[1][7])
+    try:
+        applicant_phone = str(rows_to_process[1][7])
+    except IndexError:
+        return None
 
     if applicant_phone == '':
         msg = "Ad-hoc segregated airspace applicant phone number could be faulty! Please verify. See inputted rows: {}".format(rows_to_process) 
@@ -340,7 +363,10 @@ def get_mission_type_hun(rows_to_process):
 
 def get_mission_type_eng(rows_to_process):
 
-    mission_type_eng = rows_to_process[1][8]
+    try:
+        mission_type_eng = rows_to_process[1][8]
+    except IndexError:
+        return None
 
     if mission_type_eng == '':
         msg = "Ad-hoc segregated airspace mission type could be faulty! Please verify. See inputted rows: {}".format(rows_to_process)
@@ -355,7 +381,7 @@ def get_mission_type_eng(rows_to_process):
 def get_matias_or_lara_id(rows_to_process):
 
     
-    cells = [row[13] for row in rows_to_process if row[13] != '']
+    cells = [str(row[13]) for row in rows_to_process if row[13] != '']
 
     return ','.join(cells)
 
@@ -443,7 +469,7 @@ def main():
         
         for airspace_item in list_of_airspaces_in_a_file:
              processed_content.update(airspace_item)
-             
+
         # ---------------
         delta_t = time.process_time() - start
         # - STOP TIMING -
@@ -457,7 +483,9 @@ def main():
         print(msg)
         logging.info(msg)
     
+    print("Saving output json file, this might take a while. See here: {}".format(OUTPUT_FILE_PATH_PROCESSED_DATA))
     save_dict_to_json(processed_content, OUTPUT_FILE_PATH_PROCESSED_DATA)
+    print("Script finished!")
 
 
     # TODO: I was here, continue... with the AMSL issue or with the missing getters and duration calc.
