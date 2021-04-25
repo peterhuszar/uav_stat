@@ -1,3 +1,6 @@
 input_files
+input_files.rar
 output_files
+uav_stat.log
 .vscode/
+test.py
