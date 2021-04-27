@@ -167,16 +167,34 @@ def get_boundary_coord_circle(rows_to_process):
 
 def get_boundary_coord_poly(rows_to_process):
 
+    content_of_cells = []
+    not_coordinate = []
+    ret_coordinates = []
+
     try:
         cell_to_check = rows_to_process[1][1]
     except IndexError:
         return None
 
     if 'r' not in cell_to_check and '=' not in cell_to_check:
-        
-        return [row[1] for row in rows_to_process if (row[1] != '' and '(' not in row[1] and ')' not in row[1])]
+        content_of_cells = [row[1] for row in rows_to_process if (row[1] != '' and '(' not in row[1] and ')' not in row[1])]
     else:
         return None
+
+    for cell in content_of_cells:
+        coordinates = cell.split(' ')
+        if len(coordinates) == 2:
+            coordinate_1 = string_to_gps_coordinate(coordinates[0])
+            coordinate_2 = string_to_gps_coordinate(coordinates[1])
+            if coordinate_1 and coordinate_2:
+                gps_coordinate_pair = (coordinate_1, coordinate_2)
+                ret_coordinates.append(gps_coordinate_pair)
+    
+    return ret_coordinates
+
+
+            
+        
 
 def get_place_name(rows_to_process):
 
@@ -265,7 +283,8 @@ def get_op_duration_act(earlier_datetime, latter_datetime):
         duration = latter_datetime - earlier_datetime
     except TypeError:
         msg = "Could not calculate actual operation duration with the followings: t1 = {} t2 = {}".format(earlier_datetime, latter_datetime)
-        logging.warning(msg)
+        # logging.warning(msg)
+        logging.debug(msg)  # Level had to set lower because there was too many of this log entry, though it is not really important.
         # print(msg)
         # warnings.warn(msg)
 
@@ -404,18 +423,46 @@ def excel_file_name_to_date(file_name):
 # -----------------
 # -----------------
 
+def string_to_gps_coordinate(gps_coordinate_string):
+
+    if gps_coordinate_string.endswith('N'):
+        # Positive, 0...90 deg with padding zero
+        n = gps_coordinate_string.strip('N')
+        n = n[0] + n[1] + '.' + n[2:]
+        return float(n)
+        
+    elif gps_coordinate_string.endswith('E'):
+        # Positive, 0...180 deg with padding zeros
+        e = gps_coordinate_string.strip('E')
+        e = e[0] + e[1] + e[2] + '.' + e[3:]
+        return float(e)
+
+    elif gps_coordinate_string.endswith('S'):
+        # Negative, -0...-90 deg with padding zero
+        s = gps_coordinate_string.strip('S')
+        s = s[0] + s[1] + '.' + s[2:]
+        return float(s)
+
+    elif gps_coordinate_string.endswith('W'):
+        # Negative, -0...-180 deg with padding zeros
+        w = gps_coordinate_string.strip('W')
+        w = w[0] + w[1] + w[2] + '.' + w[3:]
+        return float(w)
+    
+    else:
+        msg = 'GPS coordinate conversion error! See inputted string: {}'.format(gps_coordinate_string)
+        logging.warning(msg)
+        # print(msg)
+        # warnings.warn(msg)
+        return None
+
+# -----------------
+# -----------------
+
 def create_empty_output_file(file_path):
     with open(file_path, 'w', encoding='utf-8') as json_file:
         data = {}
         json.dump(data, json_file, indent=4, default=str)
-
-# def add_dict_to_output_json(input_dict, file_path):
-# 
-#     with open(file_path, 'r+', encoding='utf-8') as json_file:
-#         data = json.load(json_file)
-#         data.update(input_dict)
-#         json_file.seek(0)
-#         json.dump(data, json_file, indent=4, default=str)
 
 def save_dict_to_json(input_dict, file_path):
 
@@ -488,6 +535,7 @@ def main():
     print("Script finished!")
 
 
+    # TODO: actual operation duration warning logging has to be switched off. Way too much of them.
     # TODO: I was here, continue... with the AMSL issue or with the missing getters and duration calc.
     # TODO: GPS coordinates can be tricky Check how to return them 
     # TODO: False return values may not be the best ones... None would be better in some cases.
