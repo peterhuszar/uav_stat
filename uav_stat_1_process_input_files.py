@@ -8,8 +8,6 @@ import re
 import logging
 import shortuuid
 
-
-TEST_EXCEL_FILE = r'D:\python_scripts\uav_stat\input_files\NLFT 2019.05.01..xls'
 SHEET_OF_INTEREST = 3
 
 ROOT                                = os.getcwd()
@@ -19,7 +17,7 @@ OUTPUT_FILES_DIR_NAME               = "output_files"
 OUTPUT_FILES_DIR_PATH               = os.path.join(ROOT, OUTPUT_FILES_DIR_NAME)
 OUTPUT_FILE_NAME_PROCESSED_DATA     = "processed_data.json"
 OUTPUT_FILE_PATH_PROCESSED_DATA     = os.path.join(OUTPUT_FILES_DIR_PATH, OUTPUT_FILE_NAME_PROCESSED_DATA)
-LOG_FILE_NAME                       = "log_of_last_run.log"
+LOG_FILE_NAME                       = "log_of_last_run_script_1.log"
 LOG_FILE_PATH                       = os.path.join(OUTPUT_FILES_DIR_PATH, LOG_FILE_NAME)
 
 logging.basicConfig(
@@ -540,6 +538,7 @@ def main():
     # TODO: GPS coordinates can be tricky Check how to return them 
     # TODO: False return values may not be the best ones... None would be better in some cases.
     # TODO: Continue with a function which processes this complicated list and returns a great dict and saves a json file too
+    # TODO: place names could be faulty, sometimes it is divided into 2 cells of 2 rows... but it seems only if additional info is added. 
         
 
 if __name__ == "__main__":
