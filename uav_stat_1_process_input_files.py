@@ -11,13 +11,13 @@ import shortuuid
 SHEET_OF_INTEREST = 3
 
 ROOT                                = os.getcwd()
-INPUT_FILES_DIR_NAME                = "input_files"
+INPUT_FILES_DIR_NAME                = "1_raw_input_files"
 INPUT_FILES_DIR_PATH                = os.path.join(ROOT, INPUT_FILES_DIR_NAME)
-OUTPUT_FILES_DIR_NAME               = "output_files"
+OUTPUT_FILES_DIR_NAME               = "2_processed_input_files"
 OUTPUT_FILES_DIR_PATH               = os.path.join(ROOT, OUTPUT_FILES_DIR_NAME)
-OUTPUT_FILE_NAME_PROCESSED_DATA     = "processed_data.json"
+OUTPUT_FILE_NAME_PROCESSED_DATA     = "processed_inputfiles_data.json"
 OUTPUT_FILE_PATH_PROCESSED_DATA     = os.path.join(OUTPUT_FILES_DIR_PATH, OUTPUT_FILE_NAME_PROCESSED_DATA)
-LOG_FILE_NAME                       = "log_of_last_run_script_1.log"
+LOG_FILE_NAME                       = "raw_input_file_processing.log"
 LOG_FILE_PATH                       = os.path.join(OUTPUT_FILES_DIR_PATH, LOG_FILE_NAME)
 
 logging.basicConfig(
