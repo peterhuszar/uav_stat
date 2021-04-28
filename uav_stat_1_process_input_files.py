@@ -8,18 +8,25 @@ import re
 import logging
 import shortuuid
 
-SHEET_OF_INTEREST = 3
 
+# -----------------
+# Globals
+# -----------------
 ROOT                                = os.getcwd()
 INPUT_FILES_DIR_NAME                = "1_raw_input_files"
 INPUT_FILES_DIR_PATH                = os.path.join(ROOT, INPUT_FILES_DIR_NAME)
 OUTPUT_FILES_DIR_NAME               = "2_processed_input_files"
 OUTPUT_FILES_DIR_PATH               = os.path.join(ROOT, OUTPUT_FILES_DIR_NAME)
-OUTPUT_FILE_NAME_PROCESSED_DATA     = "processed_inputfiles_data.json"
+OUTPUT_FILE_NAME_PROCESSED_DATA     = "processed_input_files_data.json"
 OUTPUT_FILE_PATH_PROCESSED_DATA     = os.path.join(OUTPUT_FILES_DIR_PATH, OUTPUT_FILE_NAME_PROCESSED_DATA)
-LOG_FILE_NAME                       = "raw_input_file_processing.log"
+LOG_FILE_NAME                       = "1_raw_input_file_processing.log"
 LOG_FILE_PATH                       = os.path.join(OUTPUT_FILES_DIR_PATH, LOG_FILE_NAME)
 
+SHEET_OF_INTEREST = 3   # Sheet to be processed in each input Excel file
+
+# -----------------
+# Configure logging
+# -----------------
 logging.basicConfig(
     filename    = LOG_FILE_PATH,
     filemode    = "w",
@@ -27,102 +34,9 @@ logging.basicConfig(
     level       = logging.INFO
 )
 
-def process_excel_file(excel_file_path, excel_sheet_number):
-    # Function to process a single Excel log file.
-
-    workbook                = xlrd.open_workbook(excel_file_path)
-    sheet                   = workbook.sheet_by_index(excel_sheet_number) 
-
-    all_airspace_args = []
-    single_airspace_args = []
-    airspace_items_in_file = []
-
-    data_of_interest_reached = False
-
-    excel_file_name = get_excel_file_name(excel_file_path)
-
-    for row in range(0, sheet.nrows):
-        
-        row_content = sheet.row_values(row)
-        first_item_in_row = row_content[0]
-
-        if first_item_in_row == 1:
-            data_of_interest_reached = True
-
-        if data_of_interest_reached:
-            
-            if first_item_in_row != '' and first_item_in_row != '.' and len(single_airspace_args) > 0:
-                all_airspace_args.append(single_airspace_args)
-                single_airspace_args = []
-            single_airspace_args.append(row_content)
-
-    for item in all_airspace_args:
-
-        single_airspace_item = create_single_airspace_dict(item, excel_file_name)
-        item_key = excel_file_name.strip('.xls')
-        item_key = item_key.replace('.', '_')
-        item_key = item_key.replace(' ', '_')
-        item_key =  item_key + '_' + str(single_airspace_item['serial_number']) + '_' + str(shortuuid.uuid())
-        
-        # This slows down the script as hell...
-        # add_dict_to_output_json({item_key: single_airspace_item}, output_json_path)
-
-        airspace_items_in_file.append({ item_key: single_airspace_item })
-
-    return airspace_items_in_file
-        
-def create_single_airspace_dict(rows_to_process, origin_of_rows):
-
-    date               = excel_file_name_to_date(origin_of_rows)
-    op_time_plan_start = get_op_time_plan_start(rows_to_process, date)
-    op_time_plan_end   = get_op_time_plan_end(rows_to_process, date)
-    op_time_act_start  = get_op_time_act_start(rows_to_process, date)
-    op_time_act_end    = get_op_time_act_end(rows_to_process, date)
-
-    single_airspace_dict = {
-        "file_id"                  : origin_of_rows, 
-        "date"                     : date,
-        "serial_number"            : get_sa_serial_number(rows_to_process),
-        "boundary_coord_poly"      : get_boundary_coord_poly(rows_to_process),
-        "boundary_coord_circle"    : get_boundary_coord_circle(rows_to_process),
-        "place_name"               : get_place_name(rows_to_process),
-        "boundary_alt_l"           : get_boundary_alt_l(rows_to_process),
-        "boundary_alt_h"           : get_boundary_alt_h(rows_to_process),
-        "op_time_plan_start"       : op_time_plan_start,
-        "op_time_plan_end"         : op_time_plan_end,
-        "op_duration_plan"         : get_op_duration_plan(op_time_plan_start, op_time_plan_end),
-        "op_time_act_start"        : op_time_act_start,
-        "op_time_act_end"          : op_time_act_end,
-        "op_duration_act"          : get_op_duration_act(op_time_act_start, op_time_act_end),
-        "applicant_name"           : get_applicant_name(rows_to_process),
-        "applicant_phone"          : get_applicant_phone(rows_to_process),
-        "mission_type_hun"         : get_mission_type_hun(rows_to_process),
-        "mission_type_eng"         : get_mission_type_eng(rows_to_process),
-        "matias_or_lara_id"        : get_matias_or_lara_id(rows_to_process),
-    }
-
-    # print(origin_of_rows)
-    # print(date)
-    # print(get_sa_serial_number(rows_to_process))
-    # print(get_boundary_coord_poly(rows_to_process))
-    # print(get_boundary_coord_circle(rows_to_process))
-    # print(get_place_name(rows_to_process))
-    # print(get_boundary_alt_l(rows_to_process))
-    # print(get_boundary_alt_h(rows_to_process))
-    # print(get_op_time_plan_start(rows_to_process, date))
-    # print(get_op_time_plan_end(rows_to_process, date))
-    # print(get_op_duration_plan(op_time_plan_start, op_time_plan_end))
-    # print(get_op_time_act_start(rows_to_process, date))
-    # print(get_op_time_act_end(rows_to_process, date))
-    # print(get_op_duration_act(op_time_act_start, op_time_act_end))
-    # print(get_applicant_name(rows_to_process))
-    # print(get_applicant_phone(rows_to_process))
-    # print(get_mission_type_hun(rows_to_process))
-    # print(get_mission_type_eng(rows_to_process))
-    # print(get_matias_or_lara_id(rows_to_process))
-
-    return single_airspace_dict
-
+# -----------------
+# A sea of getters
+# -----------------
 def get_sa_serial_number(rows_to_process):
 
     sa_serial_number = rows_to_process[0][0]
@@ -189,10 +103,6 @@ def get_boundary_coord_poly(rows_to_process):
                 ret_coordinates.append(gps_coordinate_pair)
     
     return ret_coordinates
-
-
-            
-        
 
 def get_place_name(rows_to_process):
 
@@ -408,6 +318,9 @@ def get_excel_file_name(file_path):
 
     return splitted_path[-1]
 
+# -----------------
+# Converters
+# -----------------
 def excel_file_name_to_date(file_name):
 
     a = re.search(r'([0-9][0-9][0-9][0-9]).([0-9][0-9]).([0-9][0-9]).', file_name)
@@ -417,9 +330,6 @@ def excel_file_name_to_date(file_name):
     day     = int(a.group(3))
     
     return datetime.datetime(year, month, day)
-
-# -----------------
-# -----------------
 
 def string_to_gps_coordinate(gps_coordinate_string):
 
@@ -455,8 +365,8 @@ def string_to_gps_coordinate(gps_coordinate_string):
         return None
 
 # -----------------
+# File operations
 # -----------------
-
 def create_empty_output_file(file_path):
     with open(file_path, 'w', encoding='utf-8') as json_file:
         data = {}
@@ -466,9 +376,6 @@ def save_dict_to_json(input_dict, file_path):
 
     with open(file_path, 'r+', encoding='utf-8') as json_file:
         json.dump(input_dict, json_file, indent=4, default=str)
-
-# -----------------
-# -----------------
 
 def get_files_of_interest(base_folder_path):
 
@@ -482,9 +389,108 @@ def get_files_of_interest(base_folder_path):
     return files_of_interest
 
 # -----------------
+# Core functionalities
+# -----------------
+def process_excel_file(excel_file_path, excel_sheet_number):
+    # Function to process a single Excel log file.
+
+    workbook                = xlrd.open_workbook(excel_file_path)
+    sheet                   = workbook.sheet_by_index(excel_sheet_number) 
+
+    all_airspace_args = []
+    single_airspace_args = []
+    airspace_items_in_file = []
+
+    data_of_interest_reached = False
+
+    excel_file_name = get_excel_file_name(excel_file_path)
+
+    for row in range(0, sheet.nrows):
+        
+        row_content = sheet.row_values(row)
+        first_item_in_row = row_content[0]
+
+        if first_item_in_row == 1:
+            data_of_interest_reached = True
+
+        if data_of_interest_reached:
+            
+            if first_item_in_row != '' and first_item_in_row != '.' and len(single_airspace_args) > 0:
+                all_airspace_args.append(single_airspace_args)
+                single_airspace_args = []
+            single_airspace_args.append(row_content)
+
+    for item in all_airspace_args:
+
+        single_airspace_item = create_single_airspace_dict(item, excel_file_name)
+        item_key = excel_file_name.strip('.xls')
+        item_key = item_key.replace('.', '_')
+        item_key = item_key.replace(' ', '_')
+        item_key =  item_key + '_' + str(single_airspace_item['serial_number']) + '_' + str(shortuuid.uuid())
+        
+        # This slows down the script as hell...
+        # add_dict_to_output_json({item_key: single_airspace_item}, output_json_path)
+
+        airspace_items_in_file.append({ item_key: single_airspace_item })
+
+    return airspace_items_in_file
+        
+def create_single_airspace_dict(rows_to_process, origin_of_rows):
+
+    date               = excel_file_name_to_date(origin_of_rows)
+    op_time_plan_start = get_op_time_plan_start(rows_to_process, date)
+    op_time_plan_end   = get_op_time_plan_end(rows_to_process, date)
+    op_time_act_start  = get_op_time_act_start(rows_to_process, date)
+    op_time_act_end    = get_op_time_act_end(rows_to_process, date)
+
+    single_airspace_dict = {
+        "file_id"                  : origin_of_rows, 
+        "date"                     : date,
+        "serial_number"            : get_sa_serial_number(rows_to_process),
+        "boundary_coord_poly"      : get_boundary_coord_poly(rows_to_process),
+        "boundary_coord_circle"    : get_boundary_coord_circle(rows_to_process),
+        "place_name"               : get_place_name(rows_to_process),
+        "boundary_alt_l"           : get_boundary_alt_l(rows_to_process),
+        "boundary_alt_h"           : get_boundary_alt_h(rows_to_process),
+        "op_time_plan_start"       : op_time_plan_start,
+        "op_time_plan_end"         : op_time_plan_end,
+        "op_duration_plan"         : get_op_duration_plan(op_time_plan_start, op_time_plan_end),
+        "op_time_act_start"        : op_time_act_start,
+        "op_time_act_end"          : op_time_act_end,
+        "op_duration_act"          : get_op_duration_act(op_time_act_start, op_time_act_end),
+        "applicant_name"           : get_applicant_name(rows_to_process),
+        "applicant_phone"          : get_applicant_phone(rows_to_process),
+        "mission_type_hun"         : get_mission_type_hun(rows_to_process),
+        "mission_type_eng"         : get_mission_type_eng(rows_to_process),
+        "matias_or_lara_id"        : get_matias_or_lara_id(rows_to_process),
+    }
+
+    # print(origin_of_rows)
+    # print(date)
+    # print(get_sa_serial_number(rows_to_process))
+    # print(get_boundary_coord_poly(rows_to_process))
+    # print(get_boundary_coord_circle(rows_to_process))
+    # print(get_place_name(rows_to_process))
+    # print(get_boundary_alt_l(rows_to_process))
+    # print(get_boundary_alt_h(rows_to_process))
+    # print(get_op_time_plan_start(rows_to_process, date))
+    # print(get_op_time_plan_end(rows_to_process, date))
+    # print(get_op_duration_plan(op_time_plan_start, op_time_plan_end))
+    # print(get_op_time_act_start(rows_to_process, date))
+    # print(get_op_time_act_end(rows_to_process, date))
+    # print(get_op_duration_act(op_time_act_start, op_time_act_end))
+    # print(get_applicant_name(rows_to_process))
+    # print(get_applicant_phone(rows_to_process))
+    # print(get_mission_type_hun(rows_to_process))
+    # print(get_mission_type_eng(rows_to_process))
+    # print(get_matias_or_lara_id(rows_to_process))
+
+    return single_airspace_dict
+
+
+# -----------------
 # MAIN
 # -----------------    
-
 def main():
     
     processing_durations = []
