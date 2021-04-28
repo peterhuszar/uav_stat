@@ -1,6 +1,8 @@
-input_files
+1_raw_input_files
+2_processed_input_files
+3_filtered_datasets
+4_graphs
+
 input_files.rar
-output_files
-uav_stat.log
 .vscode/
 test.py
